@@ -18,7 +18,7 @@ pip install pipx
 python -m pipx ensurepath
 
 # 安装 ProductSearch
-pipx install /path/to/ProductSearch
+pipx install git+https://github.com/kaisersong/productsearch.git
 
 # 初始化配置文件
 product-search init
@@ -31,8 +31,8 @@ product-search init
 ### 方式二：开发模式安装
 
 ```bash
-git clone <repo-url>
-cd ProductSearch
+git clone https://github.com/kaisersong/productsearch.git
+cd productsearch
 pip install -e ".[dev]"
 ```
 
