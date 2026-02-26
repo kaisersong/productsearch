@@ -36,3 +36,6 @@ htmlcov/
 
 # mypy
 .mypy_cache/
+
+# Serena MCP 工具
+.serena/

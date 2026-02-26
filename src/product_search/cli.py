@@ -523,6 +523,243 @@ async def _run_batch(
     console.print(f"输出文件：[bold cyan]{output_path}[/bold cyan]")
 
 
+# ── llm 命令组 ────────────────────────────────────────────────────────────────
+
+# 各 provider 对应的默认模型
+_PROVIDER_DEFAULT_MODELS: dict[str, str] = {
+    "openai":    "gpt-4o-mini",
+    "anthropic": "claude-sonnet-4-5-20250929",
+    "ollama":    "llama3.2",
+    "deepseek":  "deepseek-chat",
+    "glm":       "glm-4-flash",
+    "minimax":   "MiniMax-Text-01",
+    "kimi":      "moonshot-v1-8k",
+    "qwen":      "qwen-turbo",
+    "seed":      "",   # 需要显式传入接入点 ID
+}
+
+_KNOWN_PROVIDERS = set(_PROVIDER_DEFAULT_MODELS.keys())
+
+
+@main.group()
+def llm():
+    """管理 LLM 模型配置（添加、查看、删除）。"""
+    pass
+
+
+@llm.command(name="add")
+@click.argument("name")
+@click.option("--provider", "-p", default=None,
+              help="模型提供商（留空时从 NAME 推断）")
+@click.option("--model", "-m", default=None,
+              help="模型名称（留空时使用 provider 默认值）")
+@click.option("--api-key", "-k", default="",
+              help="API Key（也可通过环境变量设置，不填则留空）")
+@click.option("--base-url", "-u", default="",
+              help="自定义 API Base URL（留空使用内置默认地址）")
+@click.option("--max-tokens", default=None, type=int,
+              help="最大 token 数（默认 4096）")
+@click.option("--temperature", default=None, type=float,
+              help="采样温度（默认 0.7）")
+def llm_add(name, provider, model, api_key, base_url, max_tokens, temperature):
+    """添加或更新一个 LLM 配置块。
+
+    NAME 为配置块名称，对应 config.toml 中的 [llm.NAME]。
+
+    \b
+    示例：
+      product-search llm add deepseek --api-key sk-xxx
+      product-search llm add kimi --model moonshot-v1-32k --api-key sk-xxx
+      product-search llm add gpt4 --provider openai --model gpt-4o --api-key sk-xxx
+      product-search llm add local --provider ollama --model qwen2.5
+    """
+    try:
+        import tomlkit
+    except ImportError:
+        console.print("[red]缺少依赖 tomlkit，请执行：pip install tomlkit[/red]")
+        sys.exit(1)
+
+    from product_search.core.config import config
+    from product_search.core.exceptions import ConfigError
+
+    # 推断 provider（NAME 与 provider 同名时自动推断）
+    if provider is None:
+        if name in _KNOWN_PROVIDERS:
+            provider = name
+        else:
+            console.print(
+                f"[red]无法从名称 '{name}' 推断 provider，请通过 --provider 明确指定。[/red]\n"
+                f"支持的 provider：{', '.join(sorted(_KNOWN_PROVIDERS))}"
+            )
+            sys.exit(1)
+
+    provider = provider.lower()
+    if provider not in _KNOWN_PROVIDERS:
+        console.print(
+            f"[yellow]警告：未知 provider '{provider}'，将按 OpenAI 兼容协议处理。[/yellow]"
+        )
+
+    # 确定模型名
+    if model is None:
+        model = _PROVIDER_DEFAULT_MODELS.get(provider, "")
+        if not model:
+            console.print(
+                f"[red]Provider '{provider}' 无默认模型，"
+                f"请通过 --model 指定（如豆包接入点 ID）。[/red]"
+            )
+            sys.exit(1)
+
+    # 获取可写配置路径
+    try:
+        cfg_path = config.writable_config_path()
+    except ConfigError as e:
+        console.print(f"[red]{e}[/red]")
+        sys.exit(1)
+
+    # 读取现有配置（tomlkit 保留注释和格式）
+    with open(cfg_path, "r", encoding="utf-8") as f:
+        doc = tomlkit.load(f)
+
+    if "llm" not in doc:
+        doc.add("llm", tomlkit.table())
+
+    llm_tbl = doc["llm"]
+    is_update = name in llm_tbl
+
+    # 构建字段（只写入显式传入的可选项）
+    fields: dict = {"provider": provider, "model": model}
+    if api_key:
+        fields["api_key"] = api_key
+    if base_url:
+        fields["base_url"] = base_url
+    if max_tokens is not None:
+        fields["max_tokens"] = max_tokens
+    if temperature is not None:
+        fields["temperature"] = temperature
+
+    if is_update:
+        for k, v in fields.items():
+            llm_tbl[name][k] = v
+        action = "更新"
+    else:
+        section = tomlkit.table()
+        for k, v in fields.items():
+            section.add(k, v)
+        llm_tbl.add(name, section)
+        action = "添加"
+
+    with open(cfg_path, "w", encoding="utf-8") as f:
+        tomlkit.dump(doc, f)
+
+    # 重新加载使当前进程感知到变更
+    config._initialized = False
+    config.__init__()
+
+    console.print(f"\n[green]✓[/green] 已{action} LLM 配置：[bold cyan][llm.{name}][/bold cyan]")
+    console.print(f"  provider    = [green]{provider}[/green]")
+    console.print(f"  model       = [green]{model}[/green]")
+    if api_key:
+        masked = api_key[:6] + "***" if len(api_key) > 6 else "***"
+        console.print(f"  api_key     = [dim]{masked}[/dim]")
+    if base_url:
+        console.print(f"  base_url    = [dim]{base_url}[/dim]")
+    if max_tokens is not None:
+        console.print(f"  max_tokens  = {max_tokens}")
+    if temperature is not None:
+        console.print(f"  temperature = {temperature}")
+    console.print(f"\n配置文件：[dim]{cfg_path}[/dim]")
+    console.print(
+        f"使用示例：[dim]product-search search \"华为\" --llm-config {name}[/dim]"
+    )
+
+
+@llm.command(name="list")
+def llm_list():
+    """列出所有已配置的 LLM 模型。"""
+    from product_search.core.config import _PROVIDER_ENV_KEYS, config
+
+    llm_configs = config.llm
+    if not llm_configs:
+        console.print("[yellow]暂无 LLM 配置。[/yellow]")
+        return
+
+    table = Table(title="已配置的 LLM 模型", show_lines=True, border_style="blue")
+    table.add_column("名称", style="bold cyan", min_width=12)
+    table.add_column("Provider", style="green", min_width=10)
+    table.add_column("模型", min_width=26)
+    table.add_column("API Key", min_width=18)
+    table.add_column("Base URL", min_width=20)
+
+    for cfg_name, settings in llm_configs.items():
+        # API Key 展示
+        if settings.api_key:
+            ak = settings.api_key
+            ak_display = ak[:6] + "***" if len(ak) > 6 else "***"
+        else:
+            env_var = _PROVIDER_ENV_KEYS.get(settings.provider.lower(), "")
+            if env_var and __import__("os").environ.get(env_var):
+                ak_display = f"[dim]{env_var}[/dim]"
+            else:
+                ak_display = "[red]未配置[/red]"
+
+        bu = settings.base_url if settings.base_url else "[dim]-[/dim]"
+        table.add_row(cfg_name, settings.provider, settings.model, ak_display, bu)
+
+    console.print()
+    console.print(table)
+    console.print()
+
+
+@llm.command(name="remove")
+@click.argument("name")
+@click.option("--yes", "-y", is_flag=True, help="跳过确认提示")
+def llm_remove(name, yes):
+    """删除一个 LLM 配置块。
+
+    NAME: 要删除的配置块名称（不能删除 default）
+    """
+    try:
+        import tomlkit
+    except ImportError:
+        console.print("[red]缺少依赖 tomlkit，请执行：pip install tomlkit[/red]")
+        sys.exit(1)
+
+    from product_search.core.config import config
+    from product_search.core.exceptions import ConfigError
+
+    if name == "default":
+        console.print("[red]不允许删除 default 配置块。[/red]")
+        sys.exit(1)
+
+    if not yes:
+        click.confirm(f"确认删除 LLM 配置 '[bold]{name}[/bold]'？", abort=True)
+
+    try:
+        cfg_path = config.writable_config_path()
+    except ConfigError as e:
+        console.print(f"[red]{e}[/red]")
+        sys.exit(1)
+
+    with open(cfg_path, "r", encoding="utf-8") as f:
+        doc = tomlkit.load(f)
+
+    llm_tbl = doc.get("llm", {})
+    if name not in llm_tbl:
+        console.print(f"[yellow]配置块 '[bold]{name}[/bold]' 不存在，无需删除。[/yellow]")
+        sys.exit(1)
+
+    del llm_tbl[name]
+
+    with open(cfg_path, "w", encoding="utf-8") as f:
+        tomlkit.dump(doc, f)
+
+    # 重新加载配置
+    config._initialized = False
+    config.__init__()
+
+    console.print(f"[green]✓[/green] 已删除 LLM 配置：[bold cyan][llm.{name}][/bold cyan]")
+
+
 # ── init 命令 ─────────────────────────────────────────────────────────────────
 
 @main.command()

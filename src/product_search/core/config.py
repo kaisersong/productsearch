@@ -40,11 +40,11 @@ DEFAULT_CONFIG_TEMPLATE = """\
 # 文档: https://github.com/your-repo/ProductSearch
 
 [llm]
-# LLM 提供商: openai | anthropic
+# LLM 提供商: openai | anthropic | ollama | deepseek | glm | minimax | kimi | qwen | seed
 provider = "openai"
 # 模型名称
 model = "gpt-4o-mini"
-# API Key（推荐用环境变量：OPENAI_API_KEY 或 ANTHROPIC_API_KEY）
+# API Key（推荐用环境变量，如 OPENAI_API_KEY、DEEPSEEK_API_KEY 等）
 api_key = ""
 
 # 用于最终汇总分析的模型（可单独配置更强的模型）
@@ -62,8 +62,24 @@ timeout = 30
 PROJECT_ROOT = get_project_root()
 
 
+# 各 provider 对应的环境变量名
+_PROVIDER_ENV_KEYS: Dict[str, str] = {
+    "openai":    "OPENAI_API_KEY",
+    "anthropic": "ANTHROPIC_API_KEY",
+    "deepseek":  "DEEPSEEK_API_KEY",
+    "glm":       "ZHIPU_API_KEY",
+    "minimax":   "MINIMAX_API_KEY",
+    "kimi":      "MOONSHOT_API_KEY",
+    "qwen":      "DASHSCOPE_API_KEY",
+    "seed":      "ARK_API_KEY",
+}
+
+
 class LLMSettings(BaseModel):
-    provider: str = Field(default="openai", description="LLM 提供商: openai | anthropic | ollama")
+    provider: str = Field(
+        default="openai",
+        description="LLM 提供商: openai | anthropic | ollama | deepseek | glm | minimax | kimi | qwen | seed",
+    )
     model: str = Field(default="gpt-4o-mini", description="模型名称")
     api_key: str = Field(default="", description="API Key（可留空从环境变量读取）")
     base_url: str = Field(default="", description="API Base URL（留空使用官方地址）")
@@ -74,24 +90,31 @@ class LLMSettings(BaseModel):
         """返回有效的 API Key（配置文件 > 环境变量）。"""
         if self.api_key:
             return self.api_key
-        if self.provider == "openai":
-            return os.environ.get("OPENAI_API_KEY", "")
-        if self.provider == "anthropic":
-            # 兼容标准变量名和自定义变量名
+        provider = self.provider.lower()
+        if provider == "anthropic":
+            # 兼容标准变量名和旧变量名
             return (
                 os.environ.get("ANTHROPIC_API_KEY")
                 or os.environ.get("ANTHROPIC_AUTH_TOKEN")
                 or ""
             )
-        return ""
+        env_key = _PROVIDER_ENV_KEYS.get(provider, "")
+        return os.environ.get(env_key, "") if env_key else ""
 
     def effective_base_url(self) -> Optional[str]:
-        """返回有效的 Base URL（配置文件 > 环境变量）。"""
+        """返回有效的 Base URL（配置文件 > 环境变量）。
+
+        国产模型的默认 base_url 由 factory.py 的 _OPENAI_COMPATIBLE_PROVIDERS 提供，
+        此处仅处理用户自定义覆盖的情形。
+        """
         if self.base_url:
             return self.base_url
-        if self.provider == "anthropic":
+        provider = self.provider.lower()
+        if provider == "anthropic":
             return os.environ.get("ANTHROPIC_BASE_URL") or None
-        return os.environ.get("OPENAI_BASE_URL") or None
+        if provider == "openai":
+            return os.environ.get("OPENAI_BASE_URL") or None
+        return None
 
 
 class SearchSettings(BaseModel):
@@ -137,6 +160,19 @@ class Config:
                     self._config: Optional[AppConfig] = None
                     self._load_initial_config()
                     self._initialized = True
+
+    @staticmethod
+    def _get_writable_path() -> Path:
+        """返回可写的配置文件路径（本地开发 > 用户目录，不允许写入 example）。"""
+        local = PROJECT_ROOT / "config" / "config.toml"
+        if local.exists():
+            return local
+        user_cfg = get_user_config_dir() / "config.toml"
+        if user_cfg.exists():
+            return user_cfg
+        raise ConfigError(
+            "未找到可写的配置文件。请先运行 [bold]product-search init[/bold] 创建配置文件。"
+        )
 
     @staticmethod
     def _get_config_path() -> Path:
@@ -211,6 +247,10 @@ class Config:
     @property
     def search(self) -> SearchSettings:
         return self._config.search
+
+    def writable_config_path(self) -> Path:
+        """返回可写的配置文件路径，用于 llm add/remove 等写操作。"""
+        return self._get_writable_path()
 
 
 config = Config()

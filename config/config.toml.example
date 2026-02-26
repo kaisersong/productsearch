@@ -1,8 +1,9 @@
 # ProductSearch 配置文件
 # 复制为 config/config.toml 并填入真实值
+# 支持的 provider: openai | anthropic | ollama | deepseek | glm | minimax | kimi | qwen | seed
 
 [llm.default]
-provider = "openai"          # openai | anthropic | ollama
+provider = "openai"          # 默认使用 OpenAI
 model = "gpt-4o-mini"
 api_key = ""                 # 或从环境变量 OPENAI_API_KEY 读取
 base_url = ""                # 留空使用官方地址，可配置第三方兼容 API
@@ -16,6 +17,63 @@ model = "claude-sonnet-4-5-20250929"
 api_key = ""                 # 或从环境变量 ANTHROPIC_API_KEY 读取
 max_tokens = 8192
 temperature = 0.3
+
+# ── 国产大模型示例（按需取消注释并填入 api_key）──────────────────────────
+
+# DeepSeek —— https://platform.deepseek.com
+# 环境变量: DEEPSEEK_API_KEY
+# [llm.deepseek]
+# provider = "deepseek"
+# model = "deepseek-chat"      # deepseek-chat | deepseek-reasoner
+# api_key = ""
+# max_tokens = 4096
+# temperature = 0.7
+
+# 智谱 GLM —— https://open.bigmodel.cn
+# 环境变量: ZHIPU_API_KEY
+# [llm.glm]
+# provider = "glm"
+# model = "glm-4-flash"        # glm-4 | glm-4-flash | glm-4-air | glm-3-turbo
+# api_key = ""
+# max_tokens = 4096
+# temperature = 0.7
+
+# MiniMax —— https://platform.minimax.chat
+# 环境变量: MINIMAX_API_KEY
+# [llm.minimax]
+# provider = "minimax"
+# model = "MiniMax-Text-01"    # MiniMax-Text-01 | abab6.5-chat
+# api_key = ""
+# max_tokens = 4096
+# temperature = 0.7
+
+# Kimi (Moonshot) —— https://platform.moonshot.cn
+# 环境变量: MOONSHOT_API_KEY
+# [llm.kimi]
+# provider = "kimi"
+# model = "moonshot-v1-8k"     # moonshot-v1-8k | moonshot-v1-32k | moonshot-v1-128k
+# api_key = ""
+# max_tokens = 4096
+# temperature = 0.7
+
+# 通义千问 Qwen —— https://dashscope.aliyuncs.com
+# 环境变量: DASHSCOPE_API_KEY
+# [llm.qwen]
+# provider = "qwen"
+# model = "qwen-turbo"         # qwen-turbo | qwen-plus | qwen-max | qwen-long
+# api_key = ""
+# max_tokens = 4096
+# temperature = 0.7
+
+# 字节豆包 Seed (Volcano Ark) —— https://ark.volces.com
+# 注意: model 填入推理接入点 ID，格式如 ep-20250101000000-xxxxx
+# 环境变量: ARK_API_KEY
+# [llm.seed]
+# provider = "seed"
+# model = "ep-xxxxxxxxxxxxxxxx-xxxxx"
+# api_key = ""
+# max_tokens = 4096
+# temperature = 0.7
 
 [search]
 engine = "duckduckgo"        # duckduckgo（免费）| serpapi | serper
