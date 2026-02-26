@@ -67,9 +67,9 @@ class WebSearchTool:
 
     async def _search_duckduckgo(self, query: str, max_results: int) -> List[SearchResult]:
         try:
-            from duckduckgo_search import DDGS
+            from ddgs import DDGS
         except ImportError:
-            raise SearchError("请安装 duckduckgo-search: pip install duckduckgo-search")
+            raise SearchError("请安装 ddgs: pip install ddgs")
 
         import asyncio
 
