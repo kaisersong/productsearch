@@ -1,0 +1,24 @@
+# ProductSearch 配置文件
+# 复制为 config/config.toml 并填入真实值
+
+[llm.default]
+provider = "openai"          # openai | anthropic | ollama
+model = "gpt-4o-mini"
+api_key = ""                 # 或从环境变量 OPENAI_API_KEY 读取
+base_url = ""                # 留空使用官方地址，可配置第三方兼容 API
+max_tokens = 4096
+temperature = 0.7
+
+# 分析步骤可单独配置更强模型（可选）
+[llm.analysis]
+provider = "anthropic"
+model = "claude-sonnet-4-5-20250929"
+api_key = ""                 # 或从环境变量 ANTHROPIC_API_KEY 读取
+max_tokens = 8192
+temperature = 0.3
+
+[search]
+engine = "duckduckgo"        # duckduckgo（免费）| serpapi | serper
+api_key = ""                 # serpapi/serper 需要
+max_results = 10
+timeout = 30                 # 搜索超时秒数
