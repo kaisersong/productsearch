@@ -37,19 +37,24 @@ def get_user_config_dir() -> Path:
 # 内置的最简配置模板（用于 init 命令）
 DEFAULT_CONFIG_TEMPLATE = """\
 # ProductSearch 配置文件
-# 文档: https://github.com/your-repo/ProductSearch
+# 文档: https://github.com/kaisersong/productsearch
+#
+# 支持的 provider:
+#   openai | anthropic | ollama | deepseek | glm | minimax | kimi | qwen | seed
+# 推荐通过环境变量设置 API Key，无需写入此文件：
+#   OPENAI_API_KEY / ANTHROPIC_API_KEY / DEEPSEEK_API_KEY /
+#   MOONSHOT_API_KEY / DASHSCOPE_API_KEY / ZHIPU_API_KEY / ARK_API_KEY
 
-[llm]
-# LLM 提供商: openai | anthropic | ollama | deepseek | glm | minimax | kimi | qwen | seed
+[llm.default]
 provider = "openai"
-# 模型名称
 model = "gpt-4o-mini"
-# API Key（推荐用环境变量，如 OPENAI_API_KEY、DEEPSEEK_API_KEY 等）
-api_key = ""
+api_key = ""                 # 留空则从环境变量 OPENAI_API_KEY 读取
 
-# 用于最终汇总分析的模型（可单独配置更强的模型）
+# 用于最终汇总分析的模型（可单独配置更强的模型，可选）
 [llm.analysis]
+provider = "openai"
 model = "gpt-4o-mini"
+api_key = ""
 
 [search]
 # 搜索引擎: duckduckgo（免费）| serpapi | serper
