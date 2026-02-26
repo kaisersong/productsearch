@@ -21,12 +21,12 @@ QUERY_GENERATION_PROMPT = """你是一个专业的产品调研助手。
 3. 避免重复已使用过的查询：{used_queries}
 4. 用换行分隔，每行一个查询词，不要编号或其他格式
 
-示例（针对"华为"）：
-华为手机产品线 2024
-华为笔记本电脑系列
-华为平板电脑产品
-华为企业网络设备
-华为智能穿戴设备"""
+示例（针对"示例科技"）：
+示例科技手机产品线 2024
+示例科技笔记本电脑系列
+示例科技平板电脑产品
+示例科技企业网络设备
+示例科技智能穿戴设备"""
 
 
 async def generate_queries(state: ProductSearchState, llm: BaseChatModel) -> dict:

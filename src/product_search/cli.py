@@ -61,7 +61,7 @@ def main(ctx, verbose, max_iterations, llm_config, no_summary):
 
     \b
     单次搜索：
-      product-search search "华为"
+      product-search search "示例科技"
 
     \b
     批量搜索：
@@ -117,7 +117,7 @@ async def _run_repl(max_iterations: int, llm_config: str, no_summary: bool) -> N
 def search(ctx, company_name: str, output: str, max_iterations: int, llm_config: str, no_summary: bool):
     """搜索指定企业的产品信息。
 
-    COMPANY_NAME: 企业名称（如"华为"、"Apple Inc"）
+    COMPANY_NAME: 企业名称（如"示例科技"、"Acme Corp"）
     """
     asyncio.run(_run_search(company_name, output, max_iterations, llm_config, no_summary))
 
@@ -669,7 +669,7 @@ def llm_add(name, provider, model, api_key, base_url, max_tokens, temperature):
         console.print(f"  temperature = {temperature}")
     console.print(f"\n配置文件：[dim]{cfg_path}[/dim]")
     console.print(
-        f"使用示例：[dim]product-search search \"华为\" --llm-config {name}[/dim]"
+        f"使用示例：[dim]product-search search \"示例科技\" --llm-config {name}[/dim]"
     )
 
 
