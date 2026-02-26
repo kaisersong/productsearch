@@ -760,6 +760,85 @@ def llm_remove(name, yes):
     console.print(f"[green]✓[/green] 已删除 LLM 配置：[bold cyan][llm.{name}][/bold cyan]")
 
 
+@llm.command(name="use")
+@click.argument("name")
+def llm_use(name):
+    """将指定配置设为默认（同时更新 default 和 analysis）。
+
+    \b
+    示例：
+      product-search llm use deepseek
+      product-search llm use kimi
+    """
+    try:
+        import tomlkit
+    except ImportError:
+        console.print("[red]缺少依赖 tomlkit，请执行：pip install tomlkit[/red]")
+        sys.exit(1)
+
+    from product_search.core.config import config
+    from product_search.core.exceptions import ConfigError
+
+    try:
+        cfg_path = config.writable_config_path()
+    except ConfigError as e:
+        console.print(f"[red]{e}[/red]")
+        sys.exit(1)
+
+    with open(cfg_path, "r", encoding="utf-8") as f:
+        doc = tomlkit.load(f)
+
+    llm_tbl = doc.get("llm", {})
+
+    # 查找源配置：named block 或 known provider
+    if name in llm_tbl and isinstance(llm_tbl[name], dict):
+        src = dict(llm_tbl[name])
+    elif name in _KNOWN_PROVIDERS:
+        # provider 未单独配置，用默认模型构建
+        src = {"provider": name, "model": _PROVIDER_DEFAULT_MODELS[name]}
+    else:
+        console.print(
+            f"[red]找不到配置块 '[llm.{name}]'，请先运行：[/red]\n"
+            f"  product-search llm add {name} --api-key <KEY>"
+        )
+        sys.exit(1)
+
+    if not src.get("model"):
+        console.print(
+            f"[red]Provider '{name}' 无默认模型，请先通过 llm add 指定模型。[/red]"
+        )
+        sys.exit(1)
+
+    def _upsert(tbl, block_name, fields):
+        """更新或新建一个子配置块，只覆盖 fields 中有值的字段。"""
+        if block_name not in tbl:
+            section = tomlkit.table()
+            tbl.add(block_name, section)
+        for k, v in fields.items():
+            if v:  # 跳过空字符串
+                tbl[block_name][k] = v
+
+    _upsert(llm_tbl, "default", src)
+
+    # analysis 同步：temperature 调低更适合汇总任务
+    analysis_src = dict(src)
+    analysis_src.setdefault("temperature", 0.3)
+    analysis_src["temperature"] = 0.3
+    _upsert(llm_tbl, "analysis", analysis_src)
+
+    with open(cfg_path, "w", encoding="utf-8") as f:
+        tomlkit.dump(doc, f)
+
+    config._initialized = False
+    config.__init__()
+
+    console.print(f"\n[green]✓[/green] 已将 [bold cyan]{name}[/bold cyan] 设为默认模型")
+    console.print(f"  provider = [green]{src.get('provider', name)}[/green]")
+    console.print(f"  model    = [green]{src.get('model')}[/green]")
+    console.print(f"\n[dim]default 和 analysis 均已更新。[/dim]")
+    console.print(f"直接运行 [dim]product-search search \"示例科技\"[/dim] 即可使用。")
+
+
 # ── init 命令 ─────────────────────────────────────────────────────────────────
 
 @main.command()
