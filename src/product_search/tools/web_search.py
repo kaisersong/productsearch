@@ -72,12 +72,17 @@ class WebSearchTool:
             raise SearchError("请安装 ddgs: pip install ddgs")
 
         import asyncio
+        import contextlib
+        import io
 
         loop = asyncio.get_event_loop()
-        results = await loop.run_in_executor(
-            None,
-            lambda: list(DDGS().text(query, max_results=max_results))
-        )
+
+        def _run():
+            # primp 版本不匹配时会向 stderr 打印无害的降级警告，屏蔽之
+            with contextlib.redirect_stderr(io.StringIO()):
+                return list(DDGS().text(query, max_results=max_results))
+
+        results = await loop.run_in_executor(None, _run)
 
         return [
             SearchResult(
