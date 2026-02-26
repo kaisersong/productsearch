@@ -27,7 +27,7 @@ console = Console()
 # ── 主命令组 ─────────────────────────────────────────────────────────────────
 
 @click.group(invoke_without_command=True)
-@click.version_option(version="0.1.0", prog_name="product-search")
+@click.version_option(version="0.2.0", prog_name="product-search")
 @click.option(
     "--verbose", "-v",
     is_flag=True,

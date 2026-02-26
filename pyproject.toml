@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "product-search"
-version = "0.1.0"
+version = "0.2.0"
 description = "AI Agent for searching and organizing company product information"
 readme = "README.md"
 license = {text = "MIT"}
