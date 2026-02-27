@@ -1,0 +1,10 @@
+{
+  "name": "product-search",
+  "description": "AI Agent for searching company product information. Supports single company search and batch Excel import.",
+  "version": "0.2.0",
+  "author": {
+    "name": "kaisersong",
+    "url": "https://github.com/kaisersong/productsearch"
+  },
+  "repository": "https://github.com/kaisersong/productsearch"
+}
